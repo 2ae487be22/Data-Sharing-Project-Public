@@ -1,0 +1,84 @@
+---
+title: "Outcomes of requesting data and code for submitted trials"
+author: "PB"
+output: 
+  html_document:
+  number_sections: TRUE
+  toc: true
+  toc-location: left
+  toc-depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r import_data, include = FALSE, echo = FALSE}
+library(data.table)
+library(here)
+library(gtsummary)
+library(ggplot2)
+library(ggalluvial) # for alluvial plots
+library(extrafont) # for 'Figtree Light' as an alternative to Avenir Next LT Pro for Anaesthesia
+
+Data1 <- data.table(readRDS(here("data", "Prospective_cleaned.RDS")))
+
+variables_to_summarise <- c("Public_IPD", "IPD", "Public_Code", "Code", "IPD_format2", "Data_dictionary", "English", "Variables_clear_to_me", "Reproducible")
+
+table1 <- 
+  Data1 %>%
+  tbl_summary(include = variables_to_summarise,
+              missing = "no",
+              statistic = list(
+                all_continuous() ~ "{mean} ({sd}) / {median} ({min}, {max})",
+                all_categorical() ~ "{n} ({p}%)"
+              )) %>%
+  add_n()
+
+```
+## Introduction
+
+Individual patient data and code were requested for all trials submitted to the journal Anaesthesia for a 9 month period.
+
+## Summary of outcomes
+
+Information about IPD and code for all trials
+
+```{r Table1, echo=FALSE}
+table1
+```
+
+
+# Alluvial plot
+
+```{r alluvial2, echo = FALSE}
+
+Data1[IPD == "No", Reproducible := "No"]
+
+Data2 <- Data1[, .(Freq = .N), by = .(Public_IPD, IPD, Code, Reproducible)]
+
+a <- ggplot(data = Data2,
+       aes(axis1 = Public_IPD, axis2 = IPD, axis3 = Code, axis4 = Reproducible,
+           y = Freq)) +
+  scale_x_discrete(limits = c("IPD statement", "IPD provided", "Code provided", "Reproducible"), expand = c(.2, .05)) +
+  ylab("Frequency") +
+  scale_fill_brewer(type = "qual", palette = "Dark2") +
+  geom_alluvium(aes(fill = Reproducible), alpha = 3/4) +
+  geom_stratum(fill = "grey") +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum)), nudge_x = -0.25) +
+  theme(
+    # Uncomment this element if you have the Figtree Light font
+    # text=element_text(family="Figtree Light"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    legend.position = "none",
+    axis.text = element_text(size=13))
+
+a
+
+# Uncomment this to save the plot as a .png
+# ggsave(here("output", "figs", "AlluvialPlot1.png"), a, dpi = 300)
+
+```
